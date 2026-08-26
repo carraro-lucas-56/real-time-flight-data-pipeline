@@ -1,5 +1,7 @@
 credentials.json
 google_credentials.json
-metrics.txt
+__pycache__
 .env
 .venv
+*.txt
+opensky_streaming.egg-info

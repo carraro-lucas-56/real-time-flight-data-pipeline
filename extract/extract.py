@@ -3,12 +3,19 @@ import time
 import requests
 import logging
 import json
-from datetime import datetime, timedelta
+import sys
+from datetime import datetime, timedelta, timezone
 
 from google.cloud import pubsub_v1
 from dotenv import load_dotenv
 
-logger = logging.getLogger()
+logging.basicConfig(
+    stream=sys.stdout,
+    level=logging.INFO,
+    format="%(asctime)s - %(levelname)s - %(message)s"
+)
+
+logger = logging.getLogger(__name__)
 
 load_dotenv()
 
@@ -53,7 +60,6 @@ class TokenManager:
         """Return request headers with a valid Bearer token."""
         return {"Authorization": f"Bearer {self.get_token()}"}
 
-
 # Use 'states/all' for real-time tracking, NOT 'flights/all'
 url = "https://opensky-network.org/api/states/all"
 
@@ -96,7 +102,7 @@ for i in range(1):
                 "callsign": flight[1],
                 "country": flight[2],
                 "time_position": flight[3],
-                "last_contact": flight[4],
+                "last_contact": flight[4] if flight[4] is not None else int(datetime.now().timestamp()),
                 "longitude": flight[5],
                 "latitude": flight[6],
                 "baro_altitude": flight[7],
@@ -109,10 +115,18 @@ for i in range(1):
                 "squawk" : flight[14],
                 "spi" : flight[15],
                 "position_source" : flight[16],
-                # "category" : flight[17],
+
+                # Flag to track the ingestion timestamp
+                "ingestion_timestamp": int(datetime.now().timestamp()),
+
+                # Flag that doesn't exist in the api, True if the message has 
+                # a non-null 'last_contact' field 
+                "has_valid_last_contact" : True if flight[4] is not None else False,
             }
 
-            future = publisher.publish(PUB_SUB_TOPIC, json.dumps(payload).encode('utf-8'))
+            future = publisher.publish(PUB_SUB_TOPIC, json.dumps(payload).encode('utf-8'),
+                                       # converts to miliseconds here (cause of beams's api)
+                                       last_contact=str(int(payload["last_contact"])*1000)) 
 
             try:
                 message_id = future.result(timeout=60)
@@ -120,6 +134,7 @@ for i in range(1):
             except Exception as e:
                 logger.error(f"Pub/Sub publishing failed: {str(e)}")
 
+        logger.info(f"\nTotal number of messages: {len(states)}")
 
     time.sleep(POLL_INTERVAL)
 
