@@ -75,8 +75,8 @@ params = {
     "lomax": -34.0   
 }
 
-# Free OpenSky accounts can poll every 5 seconds
-POLL_INTERVAL = 5 
+# Free OpenSky accounts can poll every 30 seconds
+POLL_INTERVAL = 30
 
 publisher = pubsub_v1.PublisherClient()
 
