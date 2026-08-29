@@ -5,3 +5,4 @@ __pycache__
 .venv
 *.txt
 opensky_streaming.egg-info
+test.py

@@ -25,7 +25,7 @@ CLIENT_SECRET = os.getenv("CLIENT_SECRET")
 PUB_SUB_TOPIC = os.getenv("PUB_SUB_TOPIC")
 
 # How many seconds before expiry to proactively refresh the token.
-TOKEN_REFRESH_MARGIN = 30
+TOKEN_REFRESH_MARGIN = 40
 
 class TokenManager:
     def __init__(self):
@@ -69,10 +69,10 @@ tokens._refresh()
 # Optional: Add a bounding box to only grab flights over South America 
 # format: (min_latitude, min_longitude, max_latitude, max_longitude)
 params = {
-    "lamin": -34.0,  
-    "lomin": -74.0,  
-    "lamax": 5.0,    
-    "lomax": -34.0   
+    "lamin": -56.0,  
+    "lomin": -92.0,  
+    "lamax": 13.0,   
+    "lomax": -28.0   
 }
 
 # Free OpenSky accounts can poll every 30 seconds
@@ -80,7 +80,7 @@ POLL_INTERVAL = 30
 
 publisher = pubsub_v1.PublisherClient()
 
-for i in range(1):
+for i in range(20):
     # If authenticated, pass auth=(username, password) inside requests.get()
     response = requests.get(url, params=params, headers=tokens.headers())
 
@@ -100,7 +100,7 @@ for i in range(1):
             payload = {
                 "icao24": flight[0],
                 "callsign": flight[1],
-                "country": flight[2],
+                "origin_country": flight[2],
                 "time_position": flight[3],
                 "last_contact": flight[4] if flight[4] is not None else int(datetime.now().timestamp()),
                 "longitude": flight[5],
