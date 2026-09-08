@@ -1,4 +1,3 @@
-
 REQUIRED_FIELDS=[
     "icao24", 
     "last_contact",
@@ -12,7 +11,9 @@ NON_NEGATIVE_FIELDS=[
 
 COORDINATES_FIELDS=["longitude", "latitude"]
 
-DESIRED_FIELDS_METRIC_1 = ["icao24", "last_contact", "latitude", "longitude"]
+FIELDS_METRIC_1 = ["icao24", "on_ground", "last_contact", "latitude", "longitude"]
+
+FIELDS_METRIC_2 = ["icao24", "last_contact", "velocity"]
 
 countries_dict = {
         'AR': 'Argentina',

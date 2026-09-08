@@ -19,7 +19,7 @@ def parse_json(data: str) -> dict | None:
 def window_file_name(window, pane, shard_index, total_shards, compression, destination):
     window_start = window.start.to_utc_datetime()
 
-    return f"{window_start:%Y-%m-%dT%H:%M:%S}.json"
+    return f"{window_start:%Y-%m-%dT%H:%M:%S}-{shard_index}.json"
 
 def is_valid(record: dict) -> bool:
     # Required fields
@@ -27,15 +27,15 @@ def is_valid(record: dict) -> bool:
         return False
 
     # Coordinates
-    if record.get("latitude",0) is None or not -90 <= record.get("latitude",0) <= 90:
+    if record.get("latitude") is None or not -90 <= record.get("latitude",0) <= 90:
         return False
 
-    if record.get("longitude",0) is None or not -180 <= record.get("longitude",0) <= 180:
+    if record.get("longitude") is None or not -180 <= record.get("longitude",0) <= 180:
         return False
 
     # non-negative fields
     if not all(
-        record.get(field) is not None and record.get(field) >= 0
+        record.get(field,0) >= 0
         for field in NON_NEGATIVE_FIELDS
     ):
         return False
@@ -60,14 +60,31 @@ class AddWindowStart(beam.DoFn):
             "window_start": window.start.to_utc_datetime()
         }    
 
+def select_desired_fields(record: dict, fields: list[str]) -> dict:
+    return {field: record.get(field) for field in fields}
+
+def get_most_recent_update():
+    """
+    returns a transformation that collect the most up to 
+    date record of each aircraft in the window    
+    """
+
+    return (
+        beam.Map(lambda x: (x["icao24"], x))
+        | beam.CombinePerKey(
+            max,
+            key=lambda x: int(x["last_contact"])
+        )
+        | beam.Values()
+    )
+
+# ---------------- HELPER FUNCTIONS FOR METRIC 1 ---------------- 
+
 def has_proper_geolocation_data(record: dict) -> bool:
     return all(record.get(field) is not None for field in COORDINATES_FIELDS)
 
 def is_in_the_air(record: dict) -> bool:
-    return not record.get("on_groud", False) 
-
-def select_desired_fields(record: dict) -> dict:
-    return {field: record[field] for field in DESIRED_FIELDS_METRIC_1}
+    return not record.get("on_ground", True) 
 
 def get_south_america_country(lat: float, lon: float) -> str:
     """
@@ -101,4 +118,10 @@ def add_curr_country(record: dict):
             "curr_country" : get_south_america_country(record["latitude"],record["longitude"])}
 
 def add_missing_countries(record: dict) -> dict:
+    "Add the countries which no aircrafts are currently flying over"
     return {country: record.get(country,0) for country in countries_list}
+
+# ---------------- HELPER FUNCTIONS FOR METRIC 2 ---------------- 
+
+def has_velocity(record: dict) -> bool:
+    return record.get("velocity") is not None
