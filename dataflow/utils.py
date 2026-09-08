@@ -4,6 +4,7 @@ import logging
 import reverse_geocoder as rg
 import apache_beam as beam
 from apache_beam.pvalue import TaggedOutput
+from apache_beam.metrics import Metrics
 
 from dataflow.constants import *
 
@@ -26,16 +27,16 @@ def is_valid(record: dict) -> bool:
     if (not all(record.get(field) is not None for field in REQUIRED_FIELDS)):
         return False
 
-    # Coordinates
-    if record.get("latitude") is None or not -90 <= record.get("latitude",0) <= 90:
+    # Coordinates (they can be null or not be present but cannot be out of boundaries)
+    if record.get("latitude") is not None and not -90 <= record.get("latitude",0) <= 90:
         return False
 
-    if record.get("longitude") is None or not -180 <= record.get("longitude",0) <= 180:
+    if record.get("longitude") is not None and not -180 <= record.get("longitude",0) <= 180:
         return False
 
-    # non-negative fields
+    # non-negative fields (they can be null or not be present but cannot be negative)
     if not all(
-        record.get(field,0) >= 0
+        record.get(field) is None or record.get(field,0) >= 0
         for field in NON_NEGATIVE_FIELDS
     ):
         return False
@@ -47,10 +48,17 @@ def is_valid(record: dict) -> bool:
     return True
 
 class IsInvalidRecord(beam.DoFn):
+    def __init__(self):
+        super().__init__()
+        self.valid_records = Metrics.counter(self.__class__, "valid_records")
+        self.invalid_records = Metrics.counter(self.__class__, "invalid_records")
+
     def process(self, element: dict | None):
         if is_valid(element):
+            self.valid_records.inc()
             yield element
         else:
+            self.invalid_records.inc()
             yield TaggedOutput("BAD_RECORD", element)
 
 class AddWindowStart(beam.DoFn):
@@ -125,3 +133,29 @@ def add_missing_countries(record: dict) -> dict:
 
 def has_velocity(record: dict) -> bool:
     return record.get("velocity") is not None
+
+
+# ---------------- MONITORING FUNCTIONS ----------------
+
+class CalculateMonitoringMetrics(beam.DoFn):
+
+    def process(self, element, window=beam.DoFn.WindowParam):
+        _, records = element
+
+        records = list(records)
+
+        yield {
+            "window_start": window.start.to_utc_datetime(),
+            "window_end": window.end.to_utc_datetime(),
+            "records_received": len(records),
+            "invalid_records" : len([record for record in records if not is_valid(record)]),
+            "records_missing_geolocation" : len([record for record in records if not has_proper_geolocation_data(record)]),
+            "records_missing_velocity" : len([record for record in records if not has_velocity(record)]),
+            "aircrafts_in_air" : len([record for record in records if is_in_the_air(record)])
+        }
+
+def display_monitoring_metrics(metrics: dict) -> None:
+    for k, v in metrics.items():
+        logger.info(f"{k} : {v}")
+    
+

@@ -1,12 +1,12 @@
 import os
 import json
+import logging
 
 from dotenv import load_dotenv
 import apache_beam as beam
 from apache_beam.transforms.window import FixedWindows
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.io.fileio import WriteToFiles
-from apache_beam.transforms.deduplicate import DeduplicatePerKey
 
 from dataflow.utils import (parse_json,
                             window_file_name,
@@ -18,10 +18,14 @@ from dataflow.utils import (parse_json,
                             add_curr_country,
                             add_missing_countries,
                             has_velocity,
-                            get_most_recent_update)
+                            get_most_recent_update,
+                            CalculateMonitoringMetrics,
+                            display_monitoring_metrics)
 
 from dataflow.constants import (FIELDS_METRIC_1,
                                 FIELDS_METRIC_2)
+
+logger = logging.getLogger()
 
 load_dotenv()
 
@@ -63,12 +67,21 @@ with beam.Pipeline(options=options) as pipeline:
          | "Create bronze window" >> beam.WindowInto(FixedWindows(60))
     )
 
+    # Save bronze to GCS
     (bronze_layer
         | "Use single key" >> beam.Map(lambda record: ('window_data', record))
         | "Collapse window" >> beam.GroupByKey()
         | "Serialize window" >> beam.Map(lambda kv: json.dumps(list(kv[1])))
         | "Write Bronze to GCS" >> WriteToFiles(BRONZE_FOLDER,
                                                 file_naming=window_file_name)
+    )
+
+    monitoring = (
+        bronze_layer
+        | "Create monitoring key" >> beam.Map(lambda x: ("metrics", x))
+        | "Group monitoring by window" >> beam.GroupByKey()
+        | "Calculate window metrics" >> beam.ParDo(CalculateMonitoringMetrics())
+        | "Display monitoring metrics" >> beam.Map(display_monitoring_metrics)
     )
 
     # ---------------------- SILVER LAYER ---------------------- 
@@ -145,5 +158,4 @@ with beam.Pipeline(options=options) as pipeline:
         write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)
     )
 
-    
 
