@@ -15,6 +15,10 @@ FIELDS_METRIC_1 = ["icao24", "on_ground", "last_contact", "latitude", "longitude
 
 FIELDS_METRIC_2 = ["icao24", "last_contact", "velocity"]
 
+FIELDS_METRIC_2 = ["icao24", "last_contact", "geo_altitude"]
+
+VERTICAL_ACCELERATION_THRESHOLD = (-1.0)
+
 countries_dict = {
         'AR': 'Argentina',
         'BO': 'Bolivia',

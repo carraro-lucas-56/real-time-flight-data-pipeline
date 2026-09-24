@@ -1,10 +1,9 @@
 import os
 import json
 import logging
-
 from dotenv import load_dotenv
 import apache_beam as beam
-from apache_beam.transforms.window import FixedWindows
+from apache_beam.transforms.window import FixedWindows, SlidingWindows
 from apache_beam.options.pipeline_options import PipelineOptions
 from apache_beam.io.fileio import WriteToFiles
 
@@ -18,6 +17,9 @@ from dataflow.utils import (parse_json,
                             add_curr_country,
                             add_missing_countries,
                             has_velocity,
+                            has_vertical_rate,
+                            calculate_vertical_acceleration,
+                            label_vertical_acceleration_danger,
                             get_most_recent_update,
                             CalculateMonitoringMetrics,
                             display_monitoring_metrics)
@@ -39,6 +41,7 @@ GOLD_FOLDER = os.getenv("GOLD_FOLDER")
 BAD_RECORDS_FOLDER = os.getenv("BAD_RECORDS_FOLDER")
 AIRCRAFTS_PER_COUNTRY_TABLE_ID=os.getenv("AIRCRAFTS_PER_COUNTRY_TABLE_ID")
 AIRCRAFTS_VELOCITY_TABLE_ID=os.getenv("AIRCRAFTS_VELOCITY_TABLE_ID")
+AIRCRAFT_VERTICAL_ANOMALIES_TABLE_ID = os.getenv("AIRCRAFT_VERTICAL_ANOMALIES_TABLE_ID")
 
 options = PipelineOptions(
     runner="DataflowRunner",
@@ -61,10 +64,10 @@ with beam.Pipeline(options=options) as pipeline:
     # ---------------------- BRONZE LAYER ---------------------- 
     bronze_layer = (
         pipeline
-         | "Read from pub/sub" >> beam.io.ReadFromPubSub(PUB_SUB_TOPIC, timestamp_attribute='last_contact')
-         | "Docode byte to str" >> beam.Map(lambda x : x.decode('utf-8'))
-         | "Convert json string to dict object" >> beam.Map(parse_json)
-         | "Create bronze window" >> beam.WindowInto(FixedWindows(60))
+        | "Read from pub/sub" >> beam.io.ReadFromPubSub(PUB_SUB_TOPIC, timestamp_attribute='last_contact')
+        | "Docode byte to str" >> beam.Map(lambda x : x.decode('utf-8'))
+        | "Convert json string to dict object" >> beam.Map(parse_json)
+        | "Create bronze window" >> beam.WindowInto(FixedWindows(60))
     )
 
     # Save bronze to GCS
@@ -158,4 +161,21 @@ with beam.Pipeline(options=options) as pipeline:
         write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)
     )
 
+    # ---------------------- METRIC 3 ----------------------
+
+    emergence_detection = (
+        cleaned_data
+        | "Create sliding window" >> beam.WindowInto(SlidingWindows(size=60, period=30))
+        | "Filter records with altitude data" >> beam.Filter(has_vertical_rate)
+        | "Add key" >> beam.Map(lambda x: (x["icao24"], x))
+        | "Group by key" >> beam.GroupByKey()
+        | "Calculate vertical acceleration" >> beam.FlatMap(calculate_vertical_acceleration)
+        | "Label dangerous vertical acceleration" >> beam.Map(label_vertical_acceleration_danger)
+        | "Add window metadata (metric 3)" >> beam.ParDo(AddWindowStart())
+    )
+
+    (emergence_detection | "Write emergence_detection to bq" >> beam.io.WriteToBigQuery(
+            table=AIRCRAFT_VERTICAL_ANOMALIES_TABLE_ID,
+            write_disposition=beam.io.BigQueryDisposition.WRITE_APPEND)
+    )
 

@@ -1,10 +1,10 @@
 import json 
 import logging
+from datetime import datetime, timezone
 
 import reverse_geocoder as rg
 import apache_beam as beam
 from apache_beam.pvalue import TaggedOutput
-from apache_beam.metrics import Metrics
 
 from dataflow.constants import *
 
@@ -48,17 +48,10 @@ def is_valid(record: dict) -> bool:
     return True
 
 class IsInvalidRecord(beam.DoFn):
-    def __init__(self):
-        super().__init__()
-        self.valid_records = Metrics.counter(self.__class__, "valid_records")
-        self.invalid_records = Metrics.counter(self.__class__, "invalid_records")
-
     def process(self, element: dict | None):
         if is_valid(element):
-            self.valid_records.inc()
             yield element
         else:
-            self.invalid_records.inc()
             yield TaggedOutput("BAD_RECORD", element)
 
 class AddWindowStart(beam.DoFn):
@@ -134,6 +127,40 @@ def add_missing_countries(record: dict) -> dict:
 def has_velocity(record: dict) -> bool:
     return record.get("velocity") is not None
 
+# ---------------- HELPER FUNCTIONS FOR METRIC 3 ---------------- 
+
+def has_vertical_rate(record: dict) -> bool:
+    return record.get("vertical_rate") is not None
+
+def calculate_vertical_acceleration(element: tuple):
+    icao24, records = element
+    records = sorted(records, key=lambda x: int(x["last_contact"]))
+
+    for previous, current in zip(records, records[1:]):
+        dt = int(current["last_contact"]) - int(previous["last_contact"])
+
+
+        if dt <= 0:
+            continue
+
+        vertical_acceleration = (
+            current["vertical_rate"] - previous["vertical_rate"]
+        ) / dt
+
+        yield {
+            "icao24": icao24,
+            "timestamp": datetime.fromtimestamp(int(current["last_contact"]), tz=timezone.utc),
+            "vertical_rate": current["vertical_rate"],
+            "vertical_acceleration": vertical_acceleration
+        }
+
+def label_vertical_acceleration_danger(record: dict) -> dict:
+    return {
+        **record,
+        "vertical_acceleration_danger": (
+            record["vertical_acceleration"] <= VERTICAL_ACCELERATION_THRESHOLD
+        )
+    }
 
 # ---------------- MONITORING FUNCTIONS ----------------
 

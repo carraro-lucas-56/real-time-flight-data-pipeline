@@ -80,7 +80,7 @@ POLL_INTERVAL = 30
 
 publisher = pubsub_v1.PublisherClient()
 
-for i in range(5):
+while True:
     # If authenticated, pass auth=(username, password) inside requests.get()
     response = requests.get(url, params=params, headers=tokens.headers())
 
