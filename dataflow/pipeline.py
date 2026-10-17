@@ -136,6 +136,8 @@ with beam.Pipeline(options=options) as pipeline:
         | "Count aircraft per country" >> beam.combiners.Count().PerKey()
         | "Converts to a single dict" >> beam.combiners.ToDict().without_defaults()
         | "Add missing countries" >> beam.Map(add_missing_countries)
+        | "Convert dict to rows" >> beam.FlatMap(lambda d: [{"country": country, "aircraft_count": count}
+                                                             for country, count in d.items()])
         | "Add window metadata" >> beam.ParDo(AddWindowStart())
     )
     
@@ -150,6 +152,7 @@ with beam.Pipeline(options=options) as pipeline:
         cleaned_data
         | "Filter desired fields (metric 2)" >> beam.Map(select_desired_fields, FIELDS_METRIC_2)
         | "Filter records with velocity data" >> beam.Filter(has_velocity)
+        | "Filter records in the air" >> beam.Filter(is_in_the_air)
         | "Greb the most recent update (metric 2)" >> get_most_recent_update()
         | "Remove 'last_contact' field" >> beam.Map(lambda x: {"icao24" : x["icao24"],
                                                                "velocity" : x["velocity"]})

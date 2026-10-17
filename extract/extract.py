@@ -5,6 +5,7 @@ import logging
 import json
 import sys
 from datetime import datetime, timedelta, timezone
+from concurrent import futures
 
 from google.cloud import pubsub_v1
 from dotenv import load_dotenv
@@ -80,9 +81,11 @@ POLL_INTERVAL = 30
 
 publisher = pubsub_v1.PublisherClient()
 
-while True:
+# while True:
+for _ in range(2):
     # If authenticated, pass auth=(username, password) inside requests.get()
     response = requests.get(url, params=params, headers=tokens.headers())
+    publish_futures = []
 
     try:
         response.raise_for_status()
@@ -127,14 +130,21 @@ while True:
             future = publisher.publish(PUB_SUB_TOPIC, json.dumps(payload).encode('utf-8'),
                                        # converts to miliseconds here (cause of beams's api)
                                        last_contact=str(int(payload["last_contact"])*1000)) 
+            publish_futures.append(future)
 
-            try:
-                message_id = future.result(timeout=60)
-                logger.info(f"Successfully published message. ID: {message_id}")
+        done, not_done = futures.wait(publish_futures, timeout=60)
+        failed = 0
+
+        for f in done:
+            try: 
+                f.result()
             except Exception as e:
-                logger.error(f"Pub/Sub publishing failed: {str(e)}")
+                failed += 1
+                logger.error(f"Pub/Sub publishing failed: {e}")
 
-        logger.info(f"\nTotal number of messages: {len(states)}")
-
+        logger.info(f"""Published {len(done) - failed}/{len(states)}, 
+                        failed {failed}, 
+                        timed out {len(not_done)}""")
+        
     time.sleep(POLL_INTERVAL)
 

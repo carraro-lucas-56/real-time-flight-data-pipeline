@@ -9,13 +9,11 @@ NON_NEGATIVE_FIELDS=[
     "baro_altitude"
 ]
 
-COORDINATES_FIELDS=["longitude", "latitude"]
+COORDINATE_FIELDS=["longitude", "latitude"]
 
 FIELDS_METRIC_1 = ["icao24", "on_ground", "last_contact", "latitude", "longitude"]
 
-FIELDS_METRIC_2 = ["icao24", "last_contact", "velocity"]
-
-FIELDS_METRIC_2 = ["icao24", "last_contact", "geo_altitude"]
+FIELDS_METRIC_2 = ["icao24", "last_contact", "velocity", "on_ground"]
 
 VERTICAL_ACCELERATION_THRESHOLD = (-1.0)
 

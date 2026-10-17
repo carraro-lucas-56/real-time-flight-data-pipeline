@@ -82,7 +82,7 @@ def get_most_recent_update():
 # ---------------- HELPER FUNCTIONS FOR METRIC 1 ---------------- 
 
 def has_proper_geolocation_data(record: dict) -> bool:
-    return all(record.get(field) is not None for field in COORDINATES_FIELDS)
+    return all(record.get(field) is not None for field in COORDINATE_FIELDS)
 
 def is_in_the_air(record: dict) -> bool:
     return not record.get("on_ground", True) 
