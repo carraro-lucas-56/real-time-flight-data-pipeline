@@ -1,0 +1,5 @@
+apache-beam[gcp]==2.75.0
+google-cloud-pubsub==2.39.1
+python-dotenv==1.2.3
+requests==2.34.2
+reverse-geocoder==1.5.1
