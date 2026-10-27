@@ -1,8 +1,16 @@
+**/.pbi/localSettings.json
+**/.pbi/cache.abf
+# Secrets: never commit these
+.env
 credentials.json
 google_credentials.json
-__pycache__
-.env
-.venv
-*.txt
-opensky_streaming.egg-info
-test.py
+*service-account*.json
+
+# Python
+.venv/
+__pycache__/
+*.pyc
+*.egg-info/
+
+# Power BI binary exports (the .pbip project is the source of truth)
+*.pbix

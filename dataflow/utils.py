@@ -22,7 +22,10 @@ def window_file_name(window, pane, shard_index, total_shards, compression, desti
 
     return f"{window_start:%Y-%m-%dT%H:%M:%S}-{shard_index}.json"
 
-def is_valid(record: dict) -> bool:
+def is_valid(record: dict | None) -> bool:
+    if record is None:
+        return False
+
     # Required fields
     if (not all(record.get(field) is not None for field in REQUIRED_FIELDS)):
         return False
