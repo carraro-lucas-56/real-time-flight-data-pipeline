@@ -1,0 +1,84 @@
+table Accel
+	lineageTag: d1bf0864-c007-47ff-98f4-2c33d276e3f7
+
+	measure 'Aircrafts in Danger' = ```
+			CALCULATE(COUNTROWS(Accel), 
+			                                Accel[vertical_acceleration_danger] = TRUE)
+			```
+		formatString: 0
+		lineageTag: f75e12bc-d6dc-47ba-b780-23482bf86da0
+
+	column icao24
+		dataType: string
+		sourceProviderType: nvarchar(16384)
+		lineageTag: c9f551b8-142c-4333-bc56-3d5ec91c1450
+		summarizeBy: none
+		sourceColumn: icao24
+
+		annotation SummarizationSetBy = Automatic
+
+	column timestamp
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 6998720c-f49f-437b-b2fd-17e3eb438bec
+		summarizeBy: none
+		sourceColumn: timestamp
+
+		annotation SummarizationSetBy = Automatic
+
+	column vertical_rate
+		dataType: double
+		sourceProviderType: double
+		lineageTag: df72652c-7caf-40b0-ae2a-a2f13db7586f
+		summarizeBy: sum
+		sourceColumn: vertical_rate
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column vertical_acceleration
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 2bd4e5bf-e555-40ba-ab49-4a058921b5f6
+		summarizeBy: sum
+		sourceColumn: vertical_acceleration
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column vertical_acceleration_danger
+		dataType: boolean
+		formatString: """TRUE"";""TRUE"";""FALSE"""
+		sourceProviderType: bit
+		lineageTag: 4a152ac0-7f11-429f-b583-ec69543e4c2b
+		summarizeBy: none
+		sourceColumn: vertical_acceleration_danger
+
+		annotation SummarizationSetBy = Automatic
+
+	column window_start
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: fd4c7e1b-a7f6-43c1-ab90-d19f0d5e78dd
+		summarizeBy: none
+		sourceColumn: window_start
+
+		annotation SummarizationSetBy = Automatic
+
+	partition Accel = m
+		mode: directQuery
+		source =
+				let
+				  Source = GoogleBigQuery.Database([BillingProject = null, UseStorageApi = null, ConnectionTimeout = null, CommandTimeout = null]),
+				  #"Navigation 1" = Source{[Name = "flight-events-streaming"]}[Data],
+				  #"Navigation 2" = #"Navigation 1"{[Name = "aircraft_metrics", Kind = "Schema"]}[Data],
+				  #"Navigation 3" = #"Navigation 2"{[Name = "aircraft_vertical_anomalies_recent", Kind = "View"]}[Data]
+				in
+				  #"Navigation 3"
+
+	annotation PBI_ResultType = Table
+

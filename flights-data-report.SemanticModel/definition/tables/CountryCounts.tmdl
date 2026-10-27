@@ -1,0 +1,68 @@
+table CountryCounts
+	lineageTag: 4820e31f-b512-42d9-b34d-95ac657000c3
+
+	measure 'Aircrafts Now' = ```
+			
+			
+			 VAR LatestDate = MAX(CountryCounts[window_start])
+			
+			 RETURN CALCULATE(SUM(CountryCounts[aircraft_count]),
+			                  CountryCounts[window_start] = LatestDate)
+			```
+		formatString: 0
+		lineageTag: 48c81854-d6ac-4677-a071-4250b321e008
+
+	measure 'Avg Aircrafts/Min' =
+			
+			
+			VAR MinuteDiff = DATEDIFF(MIN(CountryCounts[window_start]),
+			                          MAX(CountryCounts[window_start]),
+			                          MINUTE) + 1
+			
+			RETURN SUM(CountryCounts[aircraft_count]) / MinuteDiff
+		lineageTag: b0b56838-74cc-4aac-bb86-e6253af1a68f
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column window_start
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 54f0e318-0dea-4ec0-ab3c-2c56d579625c
+		summarizeBy: none
+		sourceColumn: window_start
+
+		annotation SummarizationSetBy = Automatic
+
+	column country
+		dataType: string
+		sourceProviderType: nvarchar(16384)
+		lineageTag: 080ec329-e31f-4e0c-a657-fcb6234dda3c
+		summarizeBy: none
+		sourceColumn: country
+
+		annotation SummarizationSetBy = Automatic
+
+	column aircraft_count
+		dataType: int64
+		formatString: 0
+		sourceProviderType: bigint
+		lineageTag: 5c7207ea-9fc9-4e9c-8092-fd836dd9d254
+		summarizeBy: sum
+		sourceColumn: aircraft_count
+
+		annotation SummarizationSetBy = Automatic
+
+	partition CountryCounts = m
+		mode: directQuery
+		source =
+				let
+				  Source = GoogleBigQuery.Database([BillingProject = null, UseStorageApi = null, ConnectionTimeout = null, CommandTimeout = null]),
+				  #"Navigation 1" = Source{[Name = "flight-events-streaming"]}[Data],
+				  #"Navigation 2" = #"Navigation 1"{[Name = "aircraft_metrics", Kind = "Schema"]}[Data],
+				  #"Navigation 3" = #"Navigation 2"{[Name = "aircrafts_per_country_recent", Kind = "View"]}[Data]
+				in
+				  #"Navigation 3"
+
+	annotation PBI_ResultType = Table
+

@@ -1,0 +1,51 @@
+table Velocity
+	lineageTag: e769edfb-748c-469d-aeae-e642f0abd8a2
+
+	measure 'Avg speed (m/s)' = AVERAGE(Velocity[velocity])
+		lineageTag: a8c6b4a7-dbd5-458f-904e-74e7d50e6e90
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	column window_start
+		dataType: dateTime
+		formatString: General Date
+		sourceProviderType: datetime2
+		lineageTag: 9b083709-dc8a-4b16-ad8b-8ff73ff6f56c
+		summarizeBy: none
+		sourceColumn: window_start
+
+		annotation SummarizationSetBy = Automatic
+
+	column icao24
+		dataType: string
+		sourceProviderType: nvarchar(16384)
+		lineageTag: edca7ae2-18b1-46cd-9e8e-ead06da2ae1a
+		summarizeBy: none
+		sourceColumn: icao24
+
+		annotation SummarizationSetBy = Automatic
+
+	column velocity
+		dataType: double
+		sourceProviderType: double
+		lineageTag: 21a2994a-6ec0-423d-bd2b-97466ed890c9
+		summarizeBy: sum
+		sourceColumn: velocity
+
+		annotation SummarizationSetBy = Automatic
+
+		annotation PBI_FormatHint = {"isGeneralNumber":true}
+
+	partition Velocity = m
+		mode: directQuery
+		source =
+				let
+				  Source = GoogleBigQuery.Database([BillingProject = null, UseStorageApi = null, ConnectionTimeout = null, CommandTimeout = null]),
+				  #"Navigation 1" = Source{[Name = "flight-events-streaming"]}[Data],
+				  #"Navigation 2" = #"Navigation 1"{[Name = "aircraft_metrics", Kind = "Schema"]}[Data],
+				  #"Navigation 3" = #"Navigation 2"{[Name = "realtime_aircraft_velocity_recent", Kind = "View"]}[Data]
+				in
+				  #"Navigation 3"
+
+	annotation PBI_ResultType = Table
+

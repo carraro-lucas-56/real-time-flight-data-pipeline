@@ -1,0 +1,87 @@
+{
+  "version": "1.1.0",
+  "diagrams": [
+    {
+      "ordinal": 0,
+      "scrollPosition": {
+        "x": 0,
+        "y": 0
+      },
+      "nodes": [
+        {
+          "location": {
+            "x": 0,
+            "y": 0
+          },
+          "nodeIndex": "CountryCounts",
+          "nodeLineageTag": "5c4dc9b8-f904-4382-ad53-0da6a0bfb79a",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 2
+        },
+        {
+          "location": {
+            "x": 257,
+            "y": 0
+          },
+          "nodeIndex": "Accel",
+          "nodeLineageTag": "04539cb6-9517-497b-81fc-97a9a57d3559",
+          "size": {
+            "height": 224,
+            "width": 234
+          },
+          "zIndex": 3
+        },
+        {
+          "location": {
+            "x": 535,
+            "y": 6
+          },
+          "nodeIndex": "Velocity",
+          "nodeLineageTag": "41ad9fd7-943c-401e-b394-6b3791e4c188",
+          "size": {
+            "height": 152,
+            "width": 234
+          },
+          "zIndex": 4
+        },
+        {
+          "location": {
+            "x": 3,
+            "y": 286
+          },
+          "nodeIndex": "Time",
+          "nodeLineageTag": "7a38b3b7-ef3b-473e-94bf-b92805f13627",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 1
+        },
+        {
+          "location": {
+            "x": 361.79999685287476,
+            "y": 288
+          },
+          "nodeIndex": "Top 5 countries",
+          "nodeLineageTag": "18ba15f9-696c-47c9-bcbb-ffd308f6b64c",
+          "size": {
+            "height": 200,
+            "width": 234
+          },
+          "zIndex": 0
+        }
+      ],
+      "name": "All tables",
+      "zoomValue": 100,
+      "pinKeyFieldsToTop": false,
+      "showExtraHeaderInfo": false,
+      "hideKeyFieldsWhenCollapsed": false,
+      "tablesLocked": false
+    }
+  ],
+  "selectedDiagram": "All tables",
+  "defaultDiagram": "All tables"
+}
